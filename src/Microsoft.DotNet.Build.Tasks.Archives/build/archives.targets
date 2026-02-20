@@ -75,6 +75,12 @@
   <PropertyGroup>
     <ArchiveName Condition="'$(ArchiveName)' == ''">$([System.IO.Path]::GetFileNameWithoutExtension($(MSBuildProjectFile)))</ArchiveName>
     <SymbolsArchiveName Condition="'$(SymbolsArchiveName)' == ''">$(ArchiveName)-symbols</SymbolsArchiveName>
+
+    <!-- On Windows, use -L (dereference) to follow symbolic links so archives contain
+         regular files instead of symlinks. Symbolic links require elevated privileges
+         to create on Windows. They should not be used therefore they are not supported. -->
+    <TarCreateFlags>-c</TarCreateFlags>
+    <TarCreateFlags Condition="'$(OS)' == 'Windows_NT'">-cL</TarCreateFlags>
   </PropertyGroup>
 
   <Target Name="_CheckPigzAvailability" Condition="'$(_PigzFoundExitCode)' == ''">
@@ -126,13 +132,13 @@
                   DestinationFile="$(_DestinationFileName)"
                   Condition="'$(_CurrentArchiveFormat)' == 'zip'"/>
     <!-- use parallel gzip implementation when available -->
-    <Exec Command="tar -cf - . | pigz &gt; &quot;$(_DestinationFileName)&quot;"
+    <Exec Command="tar $(TarCreateFlags)f - . | pigz &gt; &quot;$(_DestinationFileName)&quot;"
           IgnoreExitCode="true"
           IgnoreStandardErrorWarningFormat="true"
           WorkingDirectory="$(_OutputPathRoot)"
           Condition="'$(_CurrentArchiveFormat)' == 'tar.gz' and '$(_PigzFoundExitCode)' == '0'"/>
     <!-- otherwise, use built-in gzip feature (-z) -->
-    <Exec Command="tar -czf &quot;$(_DestinationFileName)&quot; ."
+    <Exec Command="tar $(TarCreateFlags)zf &quot;$(_DestinationFileName)&quot; ."
           IgnoreExitCode="true"
           IgnoreStandardErrorWarningFormat="true"
           WorkingDirectory="$(_OutputPathRoot)"
@@ -180,13 +186,13 @@
                   DestinationFile="$(_DestinationFileName)"
                   Condition="'$(_CurrentArchiveFormat)' == 'zip'"/>
     <!-- use parallel gzip implementation when available -->
-    <Exec Command="tar -cf - . | pigz &gt; &quot;$(_DestinationFileName)&quot;"
+    <Exec Command="tar $(TarCreateFlags)f - . | pigz &gt; &quot;$(_DestinationFileName)&quot;"
           IgnoreExitCode="true"
           IgnoreStandardErrorWarningFormat="true"
           WorkingDirectory="$(_SymbolsOutputPathRoot)"
           Condition="'$(_CurrentArchiveFormat)' == 'tar.gz' and '$(_PigzFoundExitCode)' == '0'"/>
     <!-- otherwise, use built-in gzip feature (-z) -->
-    <Exec Command="tar -czf &quot;$(_DestinationFileName)&quot; ."
+    <Exec Command="tar $(TarCreateFlags)zf &quot;$(_DestinationFileName)&quot; ."
           IgnoreExitCode="true"
           IgnoreStandardErrorWarningFormat="true"
           WorkingDirectory="$(_SymbolsOutputPathRoot)"
